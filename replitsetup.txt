@@ -1,0 +1,109 @@
+INSTALLING BITCOIND:
+    We've set this repl up already, but if you want to add bitcoind into your own repl here's how.
+    
+    Replit uses nixOS for its backend, so installing bitcoin is as easy as adding the nix pkgs to your dependencies.
+
+    Click the 3 dots next to "Files" on the left hand side of your screen. You should see a menu pop up with 4 options:
+    Upload file
+    Upload folder
+    Download as zip
+    Show hidden files
+
+    Select 'Show hidden files' to see the repl config files: .replit & replit.nix
+
+    Open replit.nix and add the bitcoin package dependency to the 'deps' list, keep all the other dependencies (like deps.python38Full for a python repl):
+
+    deps = [
+        pkgs.bitcoin
+        ...
+    ]
+
+    Flip over to the Shell and hit Enter, your repl will detect the change and install bitcoind.
+
+    That's it! You've now got bitcoin installed in your repl.
+
+
+RUNNING BITCOIND ON REGTEST:
+    Once installed, we can run bitcoind as a background 'daemon' process, and point it at whatever network we want to run the node for. We're just doing local TX practice for this course, so we'll start the daemon process on regtest. (We also have to set a fallbackfee rate. Nodes normally calculate the fallback fee based on what other TXs they see on the network, but because we're the only ones using our private regtest network we have to set the fee manually.)
+
+    Run the following command to start Bitcoind on regtest as a background process in the repl:
+
+    bitcoind -regtest -daemon -fallbackfee=0.0000025
+
+    You should see the following print to your shell:
+    Bitcoin Core starting
+
+    And you should be able to see your new regtest bitcoin blockchain by running
+
+    bitcoin-cli -regtest getblockchaininfo
+
+REGTEST ALIAS:
+    It's annoying to type out 'bitcoin-cli -regtest' every time, so let's alias it to bcr with the following command:
+
+    alias bcr="bitcoin-cli -regtest"
+
+CREATING A REGTEST WALLET:
+    There's a couple quirks to regtest: we're the only one using it, we mine all the blocks manually, but otherwise it operates the same way as bitcoin normally does. So when we start our regtest blockchain, there's no blocks and we don't have any bitcoin.
+
+    Let's create a wallet called "regwallet" so we can store our coins as we mine them:
+
+    bcr createwallet regwallet
+
+    That should return the following json, if it doesn't you need to start bitcoin core again using the command on line 31:
+    {
+      "name": "regwallet",
+      "warning": ""
+    }
+
+MINING REGTEST BITCOIN:
+    Again, we control block production in regtest and we get coins by mining blocks where the coinbase TX pays an address in our wallet. Let's get a new address from our wallet:
+
+    bcr getnewaddress
+
+    Then mine a block with our address receiving the coinbase reward:
+
+    bcr generatetoaddress 1 your-new-address-here
+
+    You should see an array output with a single hash. That's the blockhash of the block you just mined, we can get some info about it with the command
+
+    bcr getblock your-blockhash-here
+
+    The returned JSON shows a bunch of block data, mostly info in the blockheader, but what we're interested in is the single txid included in the block in the "tx": [] array, it should be the last item in the returned json.
+
+    That txid is the coinbase tx, and it should pay 50 regtest bitcoin to the address you specified. Let's confirm by running:
+
+    bcr gettransaction your-txid-here
+
+    It should return some json with a bunch of info about the tx. We're interested in the "details" section.
+
+
+REGTEST BLOCK CONFIRMATIONS:
+    Your gettransaction command should have returned json including a details section that looks like this:
+    "details": [
+    {
+      "address": "address-you-passed-in-earlier",
+      "category": "immature",
+      "amount": 50.00000000,
+      "label": "",
+      "vout": 0
+    }
+  ]
+
+    Notice this coin is "immature". There's a rule in bitcoin that coinbase block rewards are only spendable after 100 MORE blocks get mined on top of it. We call these blocks building on top "confirmations". SO if we check our wallet for unspent coins...:
+
+    bcr listunspent
+
+    We'll see we don't have any spendable coins. In order to make the tx spendable, we'll have to mine another 100 blocks. Let's do that with the following command:
+
+    bcr generatetoaddress 100 $(bcr getnewaddress)
+
+    (the $(bcr getnewaddress) part just grabs a new address in a single command)
+    We've now got 101 blocks in our regtest blockchain, which we can confirm with the command:
+
+    bcr getblockchaininfo
+
+    So we should have excatly 1 spendable output, the coinbase reward from block 1, which we can now see by again running:
+
+    bcr listunspent
+
+    If this returns json describing a 50BTC regtest coin, you're ready to go! Flip back over to main.py to complete the exercise!!
