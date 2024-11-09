@@ -14,6 +14,9 @@ def preimage():
         preimage_text = request.form.get('preimage')
         sendto_address = request.form.get('sendToAddress')
         sats = request.form.get('sats')
+        print(f'preimage: {preimage_text}, sendto_address: {sendto_address}, sats: {sats}')
+        # it might make sense for us to have a "from address" too, 
+        # not sure how we are going to handle signing or getting them btc to send from new wallet
 
         if not preimage_text or not sendto_address or sats is None:
             error = "All fields are required."
@@ -27,13 +30,10 @@ def preimage():
 
                 # Create the locking script in hex format
                 redeem_script_hex = f'a820{lock_hex}87'
-
-
-#                #                           #                       #
-
-
+                
                 # Construct the Bitcoin transaction and send it
                 wallet = Wallet('MyBitcoinWallet')  # Load your wallet
+
                 tx = wallet.transaction_create(outputs=[(sendto_address, int(sats), 'satoshi')],
                                                 script_type='p2sh',
                                                 redeem_script=redeem_script_hex)
@@ -45,12 +45,5 @@ def preimage():
             except Exception as e:
                 error = f"Transaction error: {e}"
 
-
-
-#                       #                       #                           #
-
-
-
-
-    # Render the form with either the txid or an error
-    return render_template('preimage.html', txid=funding_txid_big_endian, error=error)
+    # Render funding transaction page with error or with new txid
+    return render_template('funding_transaction.html', txid=funding_txid_big_endian, error=error)

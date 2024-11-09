@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Funding Transaction</title>
+</head>
+<body>
+  {% if error %}
+    <p>Error: {{ error }}</p>
+  {% else %}
+    <p>Transaction ID: {{ txid }}</p>
+  {% endif %}
+</body>
+</html>
