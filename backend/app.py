@@ -9,7 +9,12 @@ load_dotenv()
 
 app = Flask(__name__)
 
-@app.route("/preimage", methods=['POST', 'GET'])
+# Route to render the transaction form
+@app.route("/", methods=['GET'])
+def index():
+    return render_template('transaction_form.html')
+
+@app.route("/preimage", methods=['POST'])
 def preimage():
     funding_txid_big_endian = None
     error = None
