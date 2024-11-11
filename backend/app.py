@@ -1,6 +1,11 @@
-from flask import Flask, request, render_template, jsonify
+import os
 import hashlib
-from bitcoinlib.wallets import Wallet # Example Bitcoin library (install via pip)
+from flask import Flask, request, render_template, jsonify
+from bitcoinlib.wallets import Wallet
+from dotenv import load_dotenv
+
+# Load environment variables from a .env file if it exists
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -15,9 +20,7 @@ def preimage():
         sendto_address = request.form.get('sendToAddress')
         sats = request.form.get('sats')
         print(f'preimage: {preimage_text}, sendto_address: {sendto_address}, sats: {sats}')
-        # it might make sense for us to have a "from address" too, 
-        # not sure how we are going to handle signing or getting them btc to send from new wallet
-
+        
         if not preimage_text or not sendto_address or sats is None:
             error = "All fields are required."
         else:
@@ -30,13 +33,25 @@ def preimage():
 
                 # Create the locking script in hex format
                 redeem_script_hex = f'a820{lock_hex}87'
-                
-                # Construct the Bitcoin transaction and send it
-                wallet = Wallet('MyBitcoinWallet')  # Load your wallet
 
-                tx = wallet.transaction_create(outputs=[(sendto_address, int(sats), 'satoshi')],
-                                                script_type='p2sh',
-                                                redeem_script=redeem_script_hex)
+                # Retrieve the seed from environment variables
+                seed = os.getenv('BITCOIN_WALLET_SEED')
+                if not seed:
+                    raise Exception("Seed not found in environment variables")
+
+                # Load or create a wallet on the testnet
+                wallet = Wallet.create(
+                    name='MyBitcoinTestnetWallet', 
+                    keys=seed, 
+                    network='testnet'
+                )
+
+                # Create and send the transaction
+                tx = wallet.transaction_create(
+                    outputs=[(sendto_address, int(sats), 'satoshi')],
+                    script_type='p2sh',
+                    redeem_script=redeem_script_hex
+                )
                 
                 # Broadcast the transaction and get the txid
                 txid = wallet.send(tx)
@@ -47,3 +62,6 @@ def preimage():
 
     # Render funding transaction page with error or with new txid
     return render_template('funding_transaction.html', txid=funding_txid_big_endian, error=error)
+
+if __name__ == '__main__':
+    app.run(debug=True)
