@@ -1,8 +1,10 @@
 import os
 import hashlib
 from flask import Flask, request, render_template, jsonify
-from bitcoinlib.wallets import Wallet
+from cryptos import Bitcoin
+from bitcoinlib.transactions import Transaction
 from dotenv import load_dotenv
+
 
 # Load environment variables from a .env file if it exists
 load_dotenv()
@@ -18,7 +20,7 @@ def index():
 def preimage():
     funding_txid_big_endian = None
     error = None
-
+    
     if request.method == 'POST':
         # Get form data
         preimage_text = request.form.get('preimage')
@@ -44,23 +46,37 @@ def preimage():
                 if not seed:
                     raise Exception("Seed not found in environment variables")
 
-                # Load or create a wallet on the testnet
-                wallet = Wallet.create(
-                    name='MyBitcoinTestnetWallet', 
-                    keys=seed, 
-                    network='testnet'
-                )
+                # Replace with your actual Electrum seed phrase
+                seed_phrase = "wait make private addict outer jar thunder dial drill crisp hollow kiwi"
 
-                # Create and send the transaction
-                tx = wallet.transaction_create(
-                    outputs=[(sendto_address, int(sats), 'satoshi')],
-                    script_type='p2sh',
-                    redeem_script=redeem_script_hex
-                )
-                
-                # Broadcast the transaction and get the txid
-                txid = wallet.send(tx)
-                funding_txid_big_endian = txid  # Assign the real txid
+                # Import the wallet using the existing seed phrase
+                wallet = Bitcoin().electrum_wallet(seed_phrase)
+
+                # Create a new transaction object
+                tx = Transaction(network='testnet')
+
+                # Add an output to the transaction
+                tx.add_output(int(sats), sendto_address)
+
+                # Set the redeem script
+                tx.redeem_script = redeem_script_hex
+
+                # Get the private key for the first address
+                address = wallet.get_address()  # Default address (0th index address)
+                private_key = wallet.get_private_key(address)  # Get the private key for the address
+
+                # Sign the transaction with the private key
+                tx.sign(private_key)
+
+                # Serialize the transaction to hex format
+                tx_hex = tx.as_hex()
+
+                # Broadcast the transaction by sending it through bitcoinlib network
+                network = tx.network  # Network set to 'testnet'
+                network.send_raw_transaction(tx_hex)  # This sends the transaction directly
+
+                # Get the transaction ID
+                funding_txid_big_endian = tx.txid()
 
             except Exception as e:
                 error = f"Transaction error: {e}"
