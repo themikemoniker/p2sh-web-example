@@ -2,3 +2,4 @@ Flask
 gunicorn
 bitcoinlib
 python-dotenv
+cryptos
