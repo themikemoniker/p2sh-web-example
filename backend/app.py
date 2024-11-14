@@ -57,7 +57,6 @@ def preimage():
                 # Convert preimage text to bytes and calculate hex and lock
                 print("HOTEL: Encoding preimage and calculating hash")
                 preimage = preimage_text.encode()
-                preimage_hex = preimage.hex()
                 lock = hashlib.sha256(preimage).digest()
                 lock_hex = lock.hex()
 
